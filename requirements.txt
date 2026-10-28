@@ -1,6 +1,8 @@
-pandas
-xgboost
-joblib
 fastapi
 uvicorn
 pydantic
+pandas
+scikit-learn
+xgboost
+joblib
+httpx

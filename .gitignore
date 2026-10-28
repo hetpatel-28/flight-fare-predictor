@@ -1,4 +1,16 @@
+# Python & virtual env
 __pycache__/
 *.pyc
 .vscode/
 .env
+venv/
+env/
+
+# Data and Model Artifacts (Exclude heavy files)
+*.csv
+*.parquet
+*.zip
+*.tar.gz
+*.joblib
+*.pkl
+*.model

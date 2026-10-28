@@ -1,43 +1,54 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import pandas as pd
+import json
 import joblib
+import pandas as pd
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
 
-app = FastAPI(title="Expedia Flight Price Prediction API")
+app = FastAPI(title="Flight Price Prediction API")
 
-# Load trained model pipeline
-model = joblib.load("xgboost_model.pkl")
+# Load once at startup: the pipeline contains the encoder AND the model,
+# so training and inference use identical preprocessing.
+model = joblib.load("model.pkl")
+meta = json.load(open("model_meta.json"))
+KNOWN = set(meta["known_airports"])
+
 
 class FlightRequest(BaseModel):
-    startingAirport: str
-    destinationAirport: str
+    startingAirport: str = Field(min_length=3, max_length=3, examples=["JFK"])
+    destinationAirport: str = Field(min_length=3, max_length=3, examples=["LAX"])
     isBasicEconomy: bool
     isRefundable: bool
     isNonStop: bool
 
+
 @app.get("/")
 def home():
-    return {"message": "API is online! Visit /docs to test predictions."}
+    return {"message": "API is online! Visit /docs to test predictions.",
+            "training_mode": meta["metrics"]["mode"]}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 
 @app.post("/predict")
 def predict_price(flight: FlightRequest):
+    start, dest = flight.startingAirport.upper(), flight.destinationAirport.upper()
+    if start == dest:
+        raise HTTPException(422, "startingAirport and destinationAirport must differ")
+    unseen = [a for a in (start, dest) if a not in KNOWN]
+    if unseen:
+        raise HTTPException(422, f"Airport(s) not seen in training: {unseen}. "
+                                 f"Known: {sorted(KNOWN)}")
+    row = pd.DataFrame([{
+        "startingAirport": start, "destinationAirport": dest,
+        "isBasicEconomy": int(flight.isBasicEconomy),
+        "isRefundable": int(flight.isRefundable),
+        "isNonStop": int(flight.isNonStop),
+    }])
     try:
-        data = {
-            "startingAirport": flight.startingAirport,
-            "destinationAirport": flight.destinationAirport,
-            "isBasicEconomy": flight.isBasicEconomy,
-            "isRefundable": flight.isRefundable,
-            "isNonStop": flight.isNonStop
-        }
-        
-        input_df = pd.DataFrame([data])
-        
-        # Convert string columns to pandas 'category' data type for XGBoost compatibility
-        input_df['startingAirport'] = input_df['startingAirport'].astype('category')
-        input_df['destinationAirport'] = input_df['destinationAirport'].astype('category')
-        
-        prediction = model.predict(input_df)[0]
-        return {"predicted_price_USD": round(float(prediction), 2)}
-        
+        price = float(model.predict(row)[0])
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Model Error: {str(e)}")
+        raise HTTPException(500, f"Model error: {e}")
+    return {"predicted_price_USD": round(price, 2)}

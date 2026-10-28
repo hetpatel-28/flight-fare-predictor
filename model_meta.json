@@ -1,0 +1,22 @@
+{
+  "metrics": {
+    "mode": "synthetic-demo",
+    "rows": 17997,
+    "mae": 24.18355898237723,
+    "rmse": 30.559551028807515,
+    "r2": 0.8411226980375843,
+    "baseline_mae": 61.79031511729213
+  },
+  "known_airports": [
+    "ATL",
+    "BOS",
+    "DEN",
+    "DFW",
+    "JFK",
+    "LAX",
+    "MIA",
+    "ORD",
+    "SEA",
+    "SFO"
+  ]
+}

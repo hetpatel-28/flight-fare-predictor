@@ -1,15 +1,22 @@
-# Expedia Flight Price Prediction API ✈️
+# Flight Fare Prediction API
 
-An end-to-end machine learning service that predicts flight prices using XGBoost and FastAPI, trained on 1,000,000 production flight records from Expedia.
+XGBoost + scikit-learn pipeline served with FastAPI.
 
-## 📌 Project Highlights
-- **Data Engineering:** Processed and sampled 1M rows from a 30 GB dataset using Pandas to optimize memory usage.
-- **Machine Learning:** Built a Scikit-Learn pipeline featuring One-Hot Encoding for route categorical variables (`startingAirport`, `destinationAirport`) and an XGBoost Regressor.
-- **REST API Deployment:** Encapsulated model inference in FastAPI with automated Pydantic request validation and high-throughput Uvicorn server execution.
+## Run
+```
+pip install -r requirements.txt
+python train.py                  # demo: synthetic data (metrics NOT real-world)
+python train.py --data itineraries.csv --sample 1000000   # real Expedia CSV, read in chunks
+uvicorn app:app --workers 2
+python benchmark.py              # measure your own latency / throughput
+```
+## Design
+- One sklearn Pipeline: OneHotEncoder(handle_unknown="ignore") on airports + XGBRegressor -> identical preprocessing at train and inference.
+- Metrics: MAE, RMSE, R2 vs mean-fare baseline (saved in model_meta.json).
+- API: Pydantic validation, unseen-airport check (422), model loaded once at startup.
 
-## 🚀 How to Run Locally
+## Status
+Demo mode uses synthetic data. Real-data results: _fill in after running with the Expedia CSV._
 
-1. Clone the repository:
-   ```bash
-   git clone <YOUR-GITHUB-REPO-URL>
-   cd flight_api
+## Roadmap
+Time-based split, lead-time/duration features, Docker, endpoint tests.
